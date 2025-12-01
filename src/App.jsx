@@ -1,5 +1,29 @@
 import React, { useState } from 'react';
 import { Search, Scan, ArrowLeft, Share2, AlertTriangle, ChevronDown, Check, Info } from 'lucide-react';
+import goodFace from './good.png';
+import middleFace from './middle.png';
+import badFace from './bad.png';
+
+// Floating Chatbot Button mit Bildern - optimiert für mobile Sichtbarkeit
+const FloatingChatbot = ({ score }) => {
+  const getFaceImage = () => {
+    if (score >= 80) return goodFace;    // Good
+    if (score >= 50) return middleFace;  // Middle
+    return badFace;                      // Bad
+  };
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      <div className="w-20 h-20 bg-white rounded-full shadow-2xl border-4 border-white flex items-center justify-center hover:scale-110 transition-transform duration-300 cursor-pointer">
+        <img 
+          src={getFaceImage()} 
+          alt="Product Score Face" 
+          className="w-14 h-14 object-contain"
+        />
+      </div>
+    </div>
+  );
+};
 
 // Processing Slider - wie im Referenzbild
 const ProcessingSlider = ({ score }) => {
@@ -329,6 +353,12 @@ const FoodSafetyApp = () => {
           );
         })}
       </div>
+
+      {/* Floating Chatbot */}
+      <FloatingChatbot score={product.score} />
+
+      {/* Floating Chatbot */}
+      <FloatingChatbot score={product.score} />
 
       {/* DETAILED ANALYSIS SECTION */}
       <div className="px-5 mt-6 space-y-3 pb-8">
