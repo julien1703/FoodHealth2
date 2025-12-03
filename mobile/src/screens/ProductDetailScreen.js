@@ -14,9 +14,35 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
+
+// Hilfsfunktion: Score und Label aus QuickFacts berechnen
+function calculateScoreAndLabel(quickFacts) {
+  let score = 70;
+  let danger = 0, warning = 0, good = 0;
+  quickFacts.forEach(fact => {
+    if (fact.type === 'danger') danger++;
+    if (fact.type === 'warning') warning++;
+    if (fact.type === 'good') good++;
+  });
+  score += good * 10;
+  score -= warning * 15;
+  score -= danger * 30;
+  score = Math.max(0, Math.min(100, score));
+  let headline = 'Moderate';
+  let color = '#FCBE25';
+  if (score >= 90) { headline = 'Excellent'; color = '#00E199'; }
+  else if (score >= 70) { headline = 'Good Choice'; color = '#00E199'; }
+  else if (score >= 40) { headline = 'Moderate'; color = '#FCBE25'; }
+  else { headline = 'Concerning'; color = '#F65972'; }
+  return { score, headline, color };
+}
+
 export default function ProductDetailScreen({ navigation, route }) {
   const { product } = route.params;
   const [expandedSection, setExpandedSection] = useState(null);
+
+  // Score, Label und Farbe aus QuickFacts berechnen
+  const { score, headline, color } = calculateScoreAndLabel(product.quickFacts || []);
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -49,15 +75,15 @@ export default function ProductDetailScreen({ navigation, route }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* --- TOP SECTION (Dynamic Gradient) --- */}
           <LinearGradient 
-            colors={getGradientColors(product.score)}
+            colors={getGradientColors(score)}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroHeader}
           >
             {/* Header: Back Button - Glasmorphism */}
             <View style={styles.navigation}>
-              <Pressable style={styles.navButton} onPress={goBack}>
-                <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+              <Pressable style={styles.roundBackButton} onPress={goBack}>
+                <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
               </Pressable>
             </View>
 
@@ -71,8 +97,9 @@ export default function ProductDetailScreen({ navigation, route }) {
             {/* Product Title & Subtitle */}
             <View style={styles.textCenter}>
               <Text style={styles.productName}>{product.name}</Text>
+              {/* Subline kann aus Zutaten/Nutrition generiert werden, hier Dummy: */}
               <Text style={styles.productSubline}>
-                {product.mainVerdict.subline}
+                {product.mainVerdict?.subline || ''}
               </Text>
             </View>
 
@@ -84,27 +111,27 @@ export default function ProductDetailScreen({ navigation, route }) {
               </View>
               {/* Custom Range Track */}
               <View style={styles.sliderTrack}>
-                <View style={[styles.sliderFill, { width: `${product.score}%` }]} />
-                {/* The Thumb/Knob */}
-                <View style={[
-                  styles.sliderThumb, 
-                  { left: `${product.score}%` }
-                ]}>
+                  <View style={[styles.sliderFill, { width: `${score}%` }]} />
+                  {/* The Thumb/Knob */}
                   <View style={[
-                    styles.sliderThumbInner,
-                    {
-                      backgroundColor: product.score >= 70 ? '#00E199' : 
-                                     product.score >= 40 ? '#FCBE25' : '#F65972'
-                    }
-                  ]} />
+                    styles.sliderThumb, 
+                    { left: `${score}%` }
+                  ]}>
+                    <View style={[
+                      styles.sliderThumbInner,
+                      {
+                        backgroundColor: score >= 70 ? '#00E199' : 
+                                       score >= 40 ? '#FCBE25' : '#F65972'
+                      }
+                    ]} />
+                  </View>
                 </View>
-              </View>
             </View>
 
             {/* Score Display */}
             <View style={styles.scoreDisplay}>
-              <Text style={styles.scoreHeadline}>{product.mainVerdict.headline}</Text>
-              <Text style={styles.scoreNumber}>{product.score}</Text>
+              <Text style={styles.scoreHeadline}>{headline}</Text>
+              <Text style={styles.scoreNumber}>{score}</Text>
             </View>
           </LinearGradient>
 
@@ -159,7 +186,7 @@ export default function ProductDetailScreen({ navigation, route }) {
                     </View>
                     <View style={styles.accordionTextContainer}>
                       <Text style={styles.accordionTitle}>Additives</Text>
-                      <Text style={styles.accordionSubtitle}>
+                      <Text style={styles.accordionSubtext}>
                         {product.harmfulAdditives.length === 0 
                           ? "No harmful additives" 
                           : `${product.harmfulAdditives.length} to avoid`}
@@ -168,8 +195,8 @@ export default function ProductDetailScreen({ navigation, route }) {
                   </View>
                   <Ionicons 
                     name="chevron-down" 
-                    size={20} 
-                    color="#D1D5DB"
+                    size={24} 
+                    color="#6B7280"
                     style={[
                       styles.accordionChevron,
                       expandedSection === 'additives' && styles.accordionChevronRotated
@@ -192,6 +219,9 @@ export default function ProductDetailScreen({ navigation, route }) {
                           <View key={i} style={styles.additiveItem}>
                             <Text style={styles.additiveName}>{additive.name}</Text>
                             <Text style={styles.additiveReason}>{additive.reason}</Text>
+                            <Text style={styles.additiveSubtext}>
+                              {additive.subtext || 'Additive to avoid'}
+                            </Text>
                           </View>
                         ))}
                       </View>
@@ -207,18 +237,18 @@ export default function ProductDetailScreen({ navigation, route }) {
                   onPress={() => toggleSection('ingredients')}
                 >
                   <View style={styles.accordionTitleContainer}>
-                    <View style={[styles.accordionIcon, { backgroundColor: '#F9FAFB' }]}>
+                    <View style={[styles.accordionIcon, { backgroundColor: '#F9FAFB' }]}> 
                       <Text style={styles.ingredientCount}>{product.ingredients.length}</Text>
                     </View>
                     <View style={styles.accordionTextContainer}>
                       <Text style={styles.accordionTitle}>Ingredients</Text>
-                      <Text style={styles.accordionSubtitle}>Full list view</Text>
+                      <Text style={styles.accordionSubtext}>Full list view</Text>
                     </View>
                   </View>
                   <Ionicons 
                     name="chevron-down" 
-                    size={20} 
-                    color="#D1D5DB"
+                    size={24} 
+                    color="#6B7280"
                     style={[
                       styles.accordionChevron,
                       expandedSection === 'ingredients' && styles.accordionChevronRotated
@@ -294,18 +324,18 @@ export default function ProductDetailScreen({ navigation, route }) {
                   onPress={() => toggleSection('evidence')}
                 >
                   <View style={styles.accordionTitleContainer}>
-                    <View style={[styles.accordionIcon, { backgroundColor: '#FAF5FF' }]}>
+                    <View style={[styles.accordionIcon, { backgroundColor: '#FAF5FF' }]}> 
                       <Text style={styles.evidenceIcon}>📚</Text>
                     </View>
                     <View style={styles.accordionTextContainer}>
                       <Text style={styles.accordionTitle}>Scientific Evidence</Text>
-                      <Text style={styles.accordionSubtitle}>Research studies & health data</Text>
+                      <Text style={styles.accordionSubtext}>Research studies & health data</Text>
                     </View>
                   </View>
                   <Ionicons 
                     name="chevron-down" 
-                    size={20} 
-                    color="#D1D5DB"
+                    size={24} 
+                    color="#6B7280"
                     style={[
                       styles.accordionChevron,
                       expandedSection === 'evidence' && styles.accordionChevronRotated
@@ -395,6 +425,21 @@ export default function ProductDetailScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  additiveSubtext: {
+    fontSize: 13,
+    color: '#B91C1C',
+    marginTop: 2,
+    marginBottom: 2,
+    fontWeight: '500',
+    opacity: 0.8,
+  },
+  accordionSubtext: {
+    fontSize: 14,
+    color: '#B0B3B8',
+    marginTop: 2,
+    marginBottom: 2,
+    fontWeight: '500',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -412,21 +457,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingBottom: 24,
   },
-  navButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 12,
-    borderRadius: 16,
-    width: 48,
-    height: 48,
+  roundBackButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   imageContainer: {
     alignItems: 'center',

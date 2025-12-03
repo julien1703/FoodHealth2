@@ -28,14 +28,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow FoodHealth to access your camera to scan product barcodes."
-        }
-      ],
-      "expo-barcode-scanner"
-    ]
+    "plugins": []
   }
 }

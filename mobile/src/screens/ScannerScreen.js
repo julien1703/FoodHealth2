@@ -21,7 +21,6 @@ export default function ScannerScreen({ navigation }) {
   const getCameraPermissions = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     setHasPermission(status === 'granted');
-  };
 
   const handleBarCodeScanned = ({ type, data }) => {
     setScanned(true);

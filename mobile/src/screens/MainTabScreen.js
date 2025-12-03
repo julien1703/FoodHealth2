@@ -9,10 +9,18 @@ import {
   StyleSheet,
   Dimensions,
   FlatList,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+// TEMPORÄR: Native Module entfernt für Expo Go Kompatibilität
+// import { BarCodeScanner } from 'expo-barcode-scanner';
+// import { Camera } from 'expo-camera';
 import { products } from '../data/products';
+import ProductCard from '../components/ProductCard';
+import FilterDropdown from '../components/FilterDropdown';
+import useFilteredProducts, { getHealthColor } from '../hooks/useProducts';
+import { analyzeProduct, getProductInfo } from '../services/openAI';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -21,100 +29,73 @@ export default function MainTabScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [healthFilter, setHealthFilter] = useState('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  
+  // Camera and scanning states
+  const [hasPermission, setHasPermission] = useState(null);
+  const [scanned, setScanned] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  
+  // Recent Scans - echte gescannte Produkte
+  const [recentScans, setRecentScans] = useState([]);
 
   const openProduct = (product) => {
     navigation.navigate('ProductDetail', { product });
   };
 
-  const getHealthColor = (score) => {
-    if (score >= 70) return '#10B981'; // Grün
-    if (score >= 40) return '#F59E0B'; // Amber
-    return '#EF4444'; // Rot
-  };
+  // ECHTER BARCODE SCAN - Manuelle Eingabe mit echter OpenAI Analysis
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [showBarcodeInput, setShowBarcodeInput] = useState(false);
 
-  const filterProducts = (productList, includeLimit = false) => {
-    const filtered = productList.filter(p => {
-      // Text search filter
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.brand.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Health filter
-      const matchesHealthFilter = healthFilter === 'all' || 
-                                (healthFilter === 'good' && p.score >= 70) ||
-                                (healthFilter === 'moderate' && p.score >= 40 && p.score < 70) ||
-                                (healthFilter === 'poor' && p.score < 40);
-      
-      return matchesSearch && matchesHealthFilter;
-    });
+  const handleRealBarcodeScan = async (barcode) => {
+    setAnalyzing(true);
+    setShowBarcodeInput(false);
     
-    return includeLimit ? filtered.slice(0, 3) : filtered;
+    try {
+      // Step 1: Hole echte Produktinfos mit dem Barcode
+      const productInfo = await getProductInfo(barcode);
+      
+      // Step 2: Sende an OpenAI für Analyse (nutzt dein Template)
+      const analysis = await analyzeProduct(productInfo);
+      
+      // Step 3: Zu Recent Scans hinzufügen
+      const scanResult = {
+        ...analysis,
+        scannedAt: new Date().toISOString(),
+        barcode: barcode
+      };
+      setRecentScans(prev => [scanResult, ...prev.slice(0, 9)]); // Max 10 recent scans
+      
+      // Step 4: Navigiere zur Detail-Seite mit AI-Analyse
+      navigation.navigate('ProductDetail', { product: analysis });
+      
+    } catch (error) {
+      Alert.alert('Analysis Failed', error.message);
+    } finally {
+      setAnalyzing(false);
+      setBarcodeInput('');
+    }
   };
 
-  const renderFilterDropdown = (screenType) => {
-    if (!showFilterDropdown) return null;
-    
-    return (
-      <View style={styles.filterDropdown}>
-        <Pressable
-          style={[styles.filterOption, healthFilter === 'all' && styles.activeFilterOption]}
-          onPress={() => {
-            setHealthFilter('all');
-            setShowFilterDropdown(false);
-          }}
-        >
-          <Text style={[styles.filterText, healthFilter === 'all' && styles.activeFilterText]}>
-            {screenType === 'scan' ? 'All Scans' : 'All Products'}
-          </Text>
-        </Pressable>
-        
-        <Pressable
-          style={[styles.filterOption, healthFilter === 'good' && styles.activeFilterOption]}
-          onPress={() => {
-            setHealthFilter('good');
-            setShowFilterDropdown(false);
-          }}
-        >
-          <View style={styles.filterOptionContent}>
-            <View style={[styles.filterDot, { backgroundColor: '#10B981' }]} />
-            <Text style={[styles.filterText, healthFilter === 'good' && styles.activeFilterText]}>
-              Good Only
-            </Text>
-          </View>
-        </Pressable>
-        
-        <Pressable
-          style={[styles.filterOption, healthFilter === 'moderate' && styles.activeFilterOption]}
-          onPress={() => {
-            setHealthFilter('moderate');
-            setShowFilterDropdown(false);
-          }}
-        >
-          <View style={styles.filterOptionContent}>
-            <View style={[styles.filterDot, { backgroundColor: '#F59E0B' }]} />
-            <Text style={[styles.filterText, healthFilter === 'moderate' && styles.activeFilterText]}>
-              Moderate Only
-            </Text>
-          </View>
-        </Pressable>
-        
-        <Pressable
-          style={[styles.filterOption, healthFilter === 'poor' && styles.activeFilterOption]}
-          onPress={() => {
-            setHealthFilter('poor');
-            setShowFilterDropdown(false);
-          }}
-        >
-          <View style={styles.filterOptionContent}>
-            <View style={[styles.filterDot, { backgroundColor: '#EF4444' }]} />
-            <Text style={[styles.filterText, healthFilter === 'poor' && styles.activeFilterText]}>
-              Poor Only
-            </Text>
-          </View>
-        </Pressable>
-      </View>
-    );
+  const startScanning = () => {
+    setShowBarcodeInput(true);
   };
 
+  const quickTestProducts = [
+    { name: 'Coca Cola (Test)', barcode: '5000112546415' },
+    { name: 'Nutella (Test)', barcode: '8000500037508' },
+    { name: 'Red Bull (Test)', barcode: '9002490100026' }
+  ];
+
+  const handleQuickTest = (testProduct) => {
+    setBarcodeInput(testProduct.barcode);
+    handleRealBarcodeScan(testProduct.barcode);
+  };
+
+  // Hooks immer initialisieren, Listen je nach View wählen
+  const filteredProductsScan = recentScans;
+  const filteredProductsOther = useFilteredProducts(products, searchQuery, healthFilter);
+  const filterProducts = (list, includeLimit = false) => includeLimit ? list.slice(0, 3) : list;
   const getFilterButtonText = (screenType) => {
     if (healthFilter === 'all') return screenType === 'scan' ? 'All Scans' : 'All Products';
     if (healthFilter === 'good') return 'Good Only';
@@ -140,15 +121,47 @@ export default function MainTabScreen({ navigation }) {
           </View>
           
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Camera/Scanner */}
+            {/* ECHTER BARCODE SCANNER - Manuelle Eingabe */}
             <View style={styles.scannerSection}>
               <View style={styles.cameraContainer}>
-                <View style={styles.cameraFallback}>
-                  <Image
-                    source={{ uri: 'https://images.unsplash.com/photo-1556909114-5-brooklyn-bridge-new-york?w=800&h=600&fit=crop&auto=format' }}
-                    style={styles.fallbackImage}
-                  />
-                </View>
+                {!showBarcodeInput ? (
+                  <Pressable style={styles.cameraFallback} onPress={startScanning}>
+                    <Image
+                      source={{ uri: 'https://images.unsplash.com/photo-1556909114-5-brooklyn-bridge-new-york?w=800&h=600&fit=crop&auto=format' }}
+                      style={styles.fallbackImage}
+                    />
+                    <View style={styles.scanButton}>
+                      <Text style={styles.scanButtonText}>📱 Scan Barcode</Text>
+                    </View>
+                  </Pressable>
+                ) : (
+                  <View style={styles.barcodeInputContainer}>
+                    <Text style={styles.inputLabel}>Enter Barcode:</Text>
+                    <TextInput
+                      style={styles.barcodeInput}
+                      value={barcodeInput}
+                      onChangeText={setBarcodeInput}
+                      placeholder="e.g. 5000112546415"
+                      keyboardType="numeric"
+                      autoFocus
+                    />
+                    <View style={styles.inputButtons}>
+                      <Pressable 
+                        style={[styles.inputButton, styles.cancelButton]} 
+                        onPress={() => {setShowBarcodeInput(false); setBarcodeInput('');}}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable 
+                        style={[styles.inputButton, styles.scanInputButton]} 
+                        onPress={() => handleRealBarcodeScan(barcodeInput)}
+                        disabled={!barcodeInput}
+                      >
+                        <Text style={styles.scanInputButtonText}>Analyze</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
                 
                 {/* Scan Corners */}
                 <View style={[styles.scanCorner, styles.topLeft]} />
@@ -156,13 +169,33 @@ export default function MainTabScreen({ navigation }) {
                 <View style={[styles.scanCorner, styles.bottomLeft]} />
                 <View style={[styles.scanCorner, styles.bottomRight]} />
                 
-                {/* Live Indicator */}
-                <View style={styles.liveIndicator}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>LIVE</Text>
+                {/* Loading Overlay */}
+                {analyzing && (
+                  <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color="#10B981" />
+                    <Text style={styles.loadingText}>Analyzing Product...</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.scanInstruction}>
+                Enter barcode manually or test with Quick-Scan
+              </Text>
+              
+              {/* Quick Test Buttons */}
+              <View style={styles.quickTestContainer}>
+                <Text style={styles.quickTestLabel}>Quick Test:</Text>
+                <View style={styles.quickTestButtons}>
+                  {quickTestProducts.map((product, index) => (
+                    <Pressable
+                      key={index}
+                      style={styles.quickTestButton}
+                      onPress={() => handleQuickTest(product)}
+                    >
+                      <Text style={styles.quickTestButtonText}>{product.name}</Text>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
-              <Text style={styles.scanInstruction}>Scan a Barcode</Text>
             </View>
 
             {/* Gray Background Section */}
@@ -180,28 +213,18 @@ export default function MainTabScreen({ navigation }) {
                       ▼
                     </Text>
                   </Pressable>
-                  {renderFilterDropdown('scan')}
+                  <FilterDropdown
+                    visible={showFilterDropdown}
+                    healthFilter={healthFilter}
+                    screenType={'scan'}
+                    onSelect={(value) => { setHealthFilter(value); setShowFilterDropdown(false); }}
+                  />
                 </View>
               </View>
               
-              <View style={[styles.productList, { paddingHorizontal: 24 }]}>
-                {filterProducts(products, true).map((product) => (
-                  <Pressable
-                    key={product.id}
-                    style={styles.productCard}
-                    onPress={() => openProduct(product)}
-                  >
-                    <View style={styles.productImageContainer}>
-                      <Image source={{ uri: product.image }} style={styles.productImage} />
-                    </View>
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                      <Text style={styles.productBrand}>{product.brand}</Text>
-                    </View>
-                    <View style={[styles.scoreCircle, { backgroundColor: getHealthColor(product.score) }]}>
-                      <Text style={styles.scoreText}>{product.score}</Text>
-                    </View>
-                  </Pressable>
+              <View style={[styles.productList, { paddingHorizontal: 24 }]}> 
+                {(currentView === 'scan' ? filterProducts(filteredProductsScan, true) : filterProducts(filteredProductsOther, true)).map((product) => (
+                  <ProductCard key={product.id} product={product} onPress={openProduct} />
                 ))}
               </View>
             </View>
@@ -414,7 +437,12 @@ export default function MainTabScreen({ navigation }) {
                       ▼
                     </Text>
                   </Pressable>
-                  {renderFilterDropdown('saved')}
+                  <FilterDropdown
+                    visible={showFilterDropdown}
+                    healthFilter={healthFilter}
+                    screenType={'saved'}
+                    onSelect={(value) => { setHealthFilter(value); setShowFilterDropdown(false); }}
+                  />
                 </View>
               </View>
               {/* Health Progress Bar */}
@@ -482,24 +510,9 @@ export default function MainTabScreen({ navigation }) {
               )}
 
               {/* Products List */}
-              <View style={[styles.productList, { paddingHorizontal: 24 }]}>
-                {filterProducts(products).map((product) => (
-                  <Pressable
-                    key={product.id}
-                    style={styles.productCard}
-                    onPress={() => openProduct(product)}
-                  >
-                    <View style={styles.productImageContainer}>
-                      <Image source={{ uri: product.image }} style={styles.productImage} />
-                    </View>
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                      <Text style={styles.productBrand}>{product.brand}</Text>
-                    </View>
-                    <View style={[styles.scoreCircle, { backgroundColor: getHealthColor(product.score) }]}>
-                      <Text style={styles.scoreText}>{product.score}</Text>
-                    </View>
-                  </Pressable>
+              <View style={[styles.productList, { paddingHorizontal: 24 }]}> 
+                {(currentView === 'scan' ? filterProducts(filteredProductsScan) : filterProducts(filteredProductsOther)).map((product) => (
+                  <ProductCard key={product.id} product={product} onPress={openProduct} />
                 ))}
               </View>
             </ScrollView>
@@ -1166,6 +1179,58 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontWeight: '600',
   },
+
+  // Camera Scanner Styles
+  camera: {
+    flex: 1,
+  },
+  scanButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: '50%',
+    transform: [{ translateX: -60 }],
+    backgroundColor: '#10B981',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  scanButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
   
   // Bottom Navigation
   bottomNav: {
@@ -1219,5 +1284,86 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
+  },
+  // Neue Styles für echten Barcode Scanner
+  barcodeInputContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 12,
+    margin: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  barcodeInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#F9FAFB',
+    marginBottom: 16,
+  },
+  inputButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inputButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  scanInputButton: {
+    backgroundColor: '#10B981',
+  },
+  scanInputButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  quickTestContainer: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+  },
+  quickTestLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  quickTestButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickTestButton: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  quickTestButtonText: {
+    color: '#1D4ED8',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
