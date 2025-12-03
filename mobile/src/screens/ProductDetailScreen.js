@@ -345,6 +345,47 @@ export default function ProductDetailScreen({ navigation, route }) {
                   </View>
                 )}
               </View>
+
+              {/* How we calculate this score */}
+              <View style={styles.methodologySection}>
+                <Pressable 
+                  style={styles.methodologyButton}
+                  onPress={() => toggleSection('methodology')}
+                >
+                  <Ionicons name="information-circle-outline" size={16} color="#9CA3AF" />
+                  <Text style={styles.methodologyButtonText}>How we calculate this score</Text>
+                </Pressable>
+                
+                {expandedSection === 'methodology' && (
+                  <View style={styles.methodologyContent}>
+                    <Text style={styles.methodologyTitle}>🧮 Scoring Methodology</Text>
+                    
+                    <View style={[styles.methodologyItem, { backgroundColor: '#EFF6FF' }]}>
+                      <Text style={[styles.methodologyItemTitle, { color: '#1E3A8A' }]}>NOVA Classification (40% weight)</Text>
+                      <Text style={[styles.methodologyItemText, { color: '#1D4ED8' }]}>
+                        • NOVA 1 (Unprocessed): 90-100 points{"\n"}
+                        • NOVA 2 (Processed culinary): 70-89 points{"\n"}
+                        • NOVA 3 (Processed foods): 40-69 points{"\n"}
+                        • NOVA 4 (Ultra-processed): 0-39 points
+                      </Text>
+                    </View>
+                    
+                    <View style={[styles.methodologyItem, { backgroundColor: '#ECFDF5' }]}>
+                      <Text style={[styles.methodologyItemTitle, { color: '#065F46' }]}>Additives Assessment (35% weight)</Text>
+                      <Text style={[styles.methodologyItemText, { color: '#047857' }]}>
+                        Deductions based on: Artificial colors (-10), Preservatives (-5), Flavor enhancers (-8), Banned substances (-25)
+                      </Text>
+                    </View>
+                    
+                    <View style={[styles.methodologyItem, { backgroundColor: '#FFF7ED' }]}>
+                      <Text style={[styles.methodologyItemTitle, { color: '#9A3412' }]}>Nutritional Profile (25% weight)</Text>
+                      <Text style={[styles.methodologyItemText, { color: '#C2410C' }]}>
+                        Sugar, sodium, saturated fat content vs WHO daily recommendations
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -565,7 +606,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   accordionHeader: {
     padding: 16,
@@ -782,5 +823,50 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#9CA3AF',
     fontFamily: 'monospace',
+  },
+  // Methodology Section Styles
+  methodologySection: {
+    paddingTop: 16,
+    alignItems: 'center',
+  },
+  methodologyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  methodologyButtonText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  methodologyContent: {
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F4F5F7',
+    padding: 16,
+    width: '100%',
+  },
+  methodologyTitle: {
+    fontWeight: 'bold',
+    color: '#111827',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  methodologyItem: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  methodologyItemTitle: {
+    fontWeight: 'bold',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  methodologyItemText: {
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

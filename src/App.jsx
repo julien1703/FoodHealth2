@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Scan, ArrowLeft, Share2, AlertTriangle, ChevronDown, Check, Info } from 'lucide-react';
 
 
@@ -38,14 +38,56 @@ const ProcessingSlider = ({ score }) => {
 };
 
 const FoodSafetyApp = () => {
-  const [currentView, setCurrentView] = useState('home');
+  const [currentView, setCurrentView] = useState('scan'); // Startseite ist jetzt Scan
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSection, setExpandedSection] = useState(null);
+  const [healthFilter, setHealthFilter] = useState('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
   };
+
+  // Kamera initialisieren
+  useEffect(() => {
+    const initCamera = async () => {
+      if (currentView !== 'home') return;
+      
+      try {
+        const video = document.getElementById('camera-feed');
+        const fallback = document.getElementById('fallback-image');
+        
+        if (video && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'environment', // Rückkamera bevorzugen
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            } 
+          });
+          video.srcObject = stream;
+          video.style.display = 'block';
+          if (fallback) fallback.style.display = 'none';
+        } else {
+          throw new Error('Camera not supported');
+        }
+      } catch (error) {
+        console.log('Camera access failed, using fallback image:', error);
+        const video = document.getElementById('camera-feed');
+        const fallback = document.getElementById('fallback-image');
+        if (video && fallback) {
+          video.style.display = 'none';
+          fallback.style.display = 'block';
+          fallback.classList.remove('hidden');
+        }
+      }
+    };
+
+    // Kleine Verzögerung für DOM-Rendering
+    const timer = setTimeout(initCamera, 100);
+    return () => clearTimeout(timer);
+  }, [currentView]);
 
   // Dynamische Gradient-Farben basierend auf Produktscore
   const getGradientColors = (score) => {
@@ -64,20 +106,20 @@ const FoodSafetyApp = () => {
       id: 'fage-yogurt',
       name: "Total 0% Greek Yogurt",
       brand: "Fage",
-      image: "https://images.unsplash.com/photo-1571212515416-87748d4f0b69?w=400&h=400&fit=crop&auto=format",
-      score: 92,
+      image: "https://i5.walmartimages.com/seo/DANN-OIKOS-TZ-PLAIN-32OZ_d2bf48e3-1ee6-4dd2-8c91-b22292037728.ff3a1c0ba220f87c5bee5cefb3303b5c.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+      score: 85,
       scoreLabel: "Excellent",
       gradient: "from-emerald-500 to-teal-600",
       color: "#059669",
       
       mainVerdict: {
         headline: "Excellent Choice",
-        subline: "Clean ingredients, 20g protein, authentic Greek yogurt"
+        subline: "Clean ingredients, 18g protein, authentic Greek yogurt"
       },
       
       quickFacts: [
         { label: "ADDITIVES", value: "0 Detected", icon: "🛡️", type: "good" },
-        { label: "PROTEIN", value: "20g per 170g", icon: "💪", type: "good" },
+        { label: "PROTEIN", value: "18g per 170g", icon: "💪", type: "good" },
         { label: "PROCESSING", value: "NOVA 1", icon: "🏭", type: "good" },
         { label: "SUGAR", value: "6g (natural)", icon: "🍬", type: "good" }
       ],
@@ -191,6 +233,72 @@ const FoodSafetyApp = () => {
         { title: "Artificial Food Dyes and Hyperactivity", org: "The Lancet, 2007" },
         { title: "High Fructose Corn Syrup vs. Sugar", org: "American Journal of Clinical Nutrition, 2008" }
       ]
+    },
+    {
+      id: 'apples',
+      name: "Organic Gala Apples",
+      brand: "Whole Foods",
+      image: "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=400&h=400&fit=crop&auto=format",
+      score: 95,
+      scoreLabel: "Excellent",
+      gradient: "from-emerald-500 to-teal-600",
+      color: "#059669",
+      date: "Nov 28, 2024"
+    },
+    {
+      id: 'granola',
+      name: "Honey Almond Granola",
+      brand: "Nature Valley",
+      image: "https://images.unsplash.com/photo-1571197829717-0ca3207a2f0d?w=400&h=400&fit=crop&auto=format",
+      score: 55,
+      scoreLabel: "Moderate",
+      gradient: "from-amber-400 to-orange-500",
+      color: "#d97706",
+      date: "Nov 27, 2024"
+    },
+    {
+      id: 'chips',
+      name: "Classic Potato Chips",
+      brand: "Lay's",
+      image: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&h=400&fit=crop&auto=format",
+      score: 25,
+      scoreLabel: "Poor",
+      gradient: "from-rose-500 to-red-600",
+      color: "#dc2626",
+      date: "Nov 26, 2024"
+    },
+    {
+      id: 'quinoa',
+      name: "Organic Tri-Color Quinoa",
+      brand: "Bob's Red Mill",
+      image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop&auto=format",
+      score: 88,
+      scoreLabel: "Excellent",
+      gradient: "from-emerald-500 to-teal-600",
+      color: "#059669",
+      date: "Nov 25, 2024"
+    },
+    {
+      id: 'cereal',
+      name: "Frosted Flakes Cereal",
+      brand: "Kellogg's",
+      image: "https://images.unsplash.com/photo-1517686469429-8bdb88b9f907?w=400&h=400&fit=crop&auto=format",
+      score: 12,
+      scoreLabel: "Avoid",
+      gradient: "from-rose-500 to-red-600",
+      color: "#dc2626",
+      date: "Nov 24, 2024"
+    },
+    {
+      id: 'nuts',
+      name: "Mixed Raw Almonds",
+      brand: "Blue Diamond",
+      image: "https://images.unsplash.com/photo-1508747703725-719777637510?w=400&h=400&fit=crop&auto=format",
+      score: 82,
+      scoreLabel: "Good",
+      gradient: "from-emerald-500 to-teal-600",
+      color: "#059669",
+      date: "Nov 23, 2024"
     }
   ];
 
@@ -201,52 +309,693 @@ const FoodSafetyApp = () => {
   };
 
   const goBack = () => {
-    setCurrentView('home');
+    setCurrentView('scan'); // Zurück zur Scan-Seite
     setSelectedProduct(null);
   };
 
-  // ==================== HOME SCREEN ====================
-  if (currentView === 'home') {
+  // ==================== SCAN SCREEN (Startseite) ====================
+  if (currentView === 'scan') {
     return (
       <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
         <div className="bg-white px-6 pt-14 pb-6">
-          <h1 className="text-3xl font-black text-gray-900 mb-1">Hello, User 👋</h1>
-          <p className="text-gray-500 text-base">What are we eating today?</p>
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-black">Hello, Julien</h1>
+              <p className="text-gray-400 text-sm mt-1">What are we shopping today ?</p>
+            </div>
+            <button className="text-gray-800 text-xl mt-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
           
-          <div className="mt-6 bg-gray-100 rounded-2xl p-4 flex items-center gap-3">
-            <Search className="w-5 h-5 text-gray-400" />
+          {/* Camera Scan Area */}
+          <div className="w-full relative rounded-2xl overflow-hidden shadow-sm mb-3 group cursor-pointer">
+            <video 
+              id="camera-feed"
+              className="w-full h-48 object-cover"
+              autoPlay
+              playsInline
+              muted
+            />
+            
+            {/* Fallback image if camera fails */}
+            <img 
+              id="fallback-image"
+              src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1000&auto=format&fit=crop" 
+              className="w-full h-48 object-cover opacity-90 hidden" 
+              alt="Shelf"
+            />
+            
+            {/* Scan Corners */}
+            <div className="absolute top-5 left-5 w-10 h-10 border-white border-t-4 border-l-4 rounded-tl"></div>
+            <div className="absolute top-5 right-5 w-10 h-10 border-white border-t-4 border-r-4 rounded-tr"></div>
+            <div className="absolute bottom-5 left-5 w-10 h-10 border-white border-b-4 border-l-4 rounded-bl"></div>
+            <div className="absolute bottom-5 right-5 w-10 h-10 border-white border-b-4 border-r-4 rounded-br"></div>
+            
+            {/* Camera Status Indicator */}
+            <div className="absolute top-3 left-3 flex items-center gap-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span>LIVE</span>
+            </div>
+          </div>
+          <p className="text-center text-black font-medium mb-8">Scan a Barcode</p>
+        </div>
+
+        <div className="px-6 pt-6 pb-32">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Recent Scans</h2>
+            <div className="relative">
+              <button 
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center gap-2 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
+              >
+                <span>
+                  {healthFilter === 'all' ? 'All Scans' : 
+                   healthFilter === 'good' ? 'Good Only' :
+                   healthFilter === 'moderate' ? 'Moderate Only' : 'Poor Only'}
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showFilterDropdown && (
+                <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 py-2 min-w-[140px] z-10">
+                  <button
+                    onClick={() => {
+                      setHealthFilter('all');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                      healthFilter === 'all' ? 'text-green-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    All Scans
+                  </button>
+                  <button
+                    onClick={() => {
+                      setHealthFilter('good');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      healthFilter === 'good' ? 'text-green-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Good Only
+                  </button>
+                  <button
+                    onClick={() => {
+                      setHealthFilter('moderate');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      healthFilter === 'moderate' ? 'text-amber-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    Moderate Only
+                  </button>
+                  <button
+                    onClick={() => {
+                      setHealthFilter('poor');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      healthFilter === 'poor' ? 'text-red-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    Poor Only
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {products.filter(p => {
+              // Text search filter
+              const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+              
+              // Health filter
+              const matchesHealthFilter = healthFilter === 'all' || 
+                                        (healthFilter === 'good' && p.score >= 70) ||
+                                        (healthFilter === 'moderate' && p.score >= 40 && p.score < 70) ||
+                                        (healthFilter === 'poor' && p.score < 40);
+              
+              return matchesSearch && matchesHealthFilter;
+            }).slice(0, 3).map((product) => (
+              <button
+                key={product.id}
+                onClick={() => openProduct(product)}
+                className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform"
+              >
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center p-2">
+                  <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="font-bold text-gray-900 text-base truncate">{product.name}</div>
+                  <div className="text-sm text-gray-500">{product.brand}</div>
+                </div>
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm"
+                  style={{ backgroundColor: product.color }}
+                >
+                  <span className="text-white font-black text-sm">{product.score}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Bottom Navigation */}
+        <div className="fixed bottom-8 left-0 w-full px-8 flex justify-between items-center z-50">
+          {/* Left Side: Saved + Search */}
+          <div className="bg-gray-200 rounded-full h-14 px-4 flex items-center gap-3 shadow-md">
+            {/* Saved Button */}
+            <button 
+              onClick={() => setCurrentView('home')}
+              className={`h-10 rounded-full flex items-center gap-2 transition-all duration-300 ${
+                currentView === 'home' 
+                  ? 'bg-green-600 text-white px-4' 
+                  : 'text-gray-400 px-2 hover:text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+              </svg>
+              {currentView === 'home' && (
+                <span className="text-sm font-medium whitespace-nowrap">Saved</span>
+              )}
+            </button>
+            
+            {/* Search Button */}
+            <button 
+              onClick={() => setCurrentView('search')}
+              className={`h-10 rounded-full flex items-center gap-2 transition-all duration-300 ${
+                currentView === 'search' 
+                  ? 'bg-green-600 text-white px-4' 
+                  : 'text-gray-400 px-2 hover:text-gray-600'
+              }`}
+            >
+              <Search className="w-5 h-5" />
+              {currentView === 'search' && (
+                <span className="text-sm font-medium whitespace-nowrap">Search</span>
+              )}
+            </button>
+          </div>
+          
+          {/* Right Side: Scan Button */}
+          <button 
+            onClick={() => setCurrentView('scan')}
+            className={`h-14 rounded-full flex items-center gap-2 shadow-md transition-all duration-300 ${
+              currentView === 'scan' 
+                ? 'bg-green-600 text-white px-6' 
+                : 'bg-gray-200 text-gray-600 px-4 hover:bg-gray-300'
+            }`}
+          >
+            <Scan className="w-5 h-5" />
+            {currentView === 'scan' && (
+              <span className="text-sm font-medium whitespace-nowrap">Scan</span>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== SEARCH SCREEN ====================
+  if (currentView === 'search') {
+    const stores = [
+      { name: 'Safeway', logo: '🏪', color: 'bg-red-500' },
+      { name: 'Costco', logo: '🏬', color: 'bg-blue-500' },
+      { name: 'Sprouts Farmers Market', logo: '🌿', color: 'bg-green-600' },
+      { name: 'Rainbow Grocery', logo: '🌈', color: 'bg-green-700' },
+      { name: 'Walgreens', logo: '💊', color: 'bg-red-600' },
+      { name: 'Woodlands', logo: '🌳', color: 'bg-green-500' },
+      { name: 'Mollie Stone\'s', logo: '🏪', color: 'bg-black' },
+      { name: 'Show all', logo: '→', color: 'bg-gray-400', special: true, count: '69 stores' }
+    ];
+
+    return (
+      <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+        {/* Header */}
+        <div className="bg-white px-6 pt-14 pb-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-1">
+              <span className="text-2xl font-bold text-black">chec</span>
+              <span className="text-2xl font-bold text-green-600">K</span>
+              <span className="text-2xl font-bold text-black">it</span>
+            </div>
+            <button className="text-gray-800 text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search products and stores"
+              className="w-full bg-gray-100 rounded-full py-3 pl-12 pr-12 text-base outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <button className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Location */}
+          <div className="flex items-center justify-center gap-2 text-gray-600">
+            <span className="text-lg font-medium">94105</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Quick Access Section */}
+        <div className="px-6 pt-6 pb-6">
+          <div className="flex gap-3 mb-6">
+            <button className="flex-1 bg-white text-gray-900 rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=40&h=40&fit=crop&crop=center" 
+                  alt="All Stores" 
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm">All Stores</div>
+                <div className="text-xs text-gray-500">69 nearby</div>
+              </div>
+            </button>
+            <button className="flex-1 bg-white text-gray-900 rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=40&h=40&fit=crop&crop=center" 
+                  alt="Popular" 
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm">Popular</div>
+                <div className="text-xs text-gray-500">Top picks</div>
+              </div>
+            </button>
+          </div>
+          
+          {/* Top Stores Carousel */}
+          <h3 className="text-lg font-bold text-black mb-4">Popular Stores</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            <button className="min-w-[120px] bg-white rounded-2xl p-3 flex flex-col items-center gap-2 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=60&h=60&fit=crop&crop=center" 
+                  alt="Safeway" 
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-900 text-xs">Safeway</div>
+                <div className="text-xs text-gray-500">2.1 mi</div>
+              </div>
+            </button>
+            <button className="min-w-[120px] bg-white rounded-2xl p-3 flex flex-col items-center gap-2 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=60&h=60&fit=crop&crop=center" 
+                  alt="Costco" 
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-900 text-xs">Costco</div>
+                <div className="text-xs text-gray-500">3.2 mi</div>
+              </div>
+            </button>
+            <button className="min-w-[120px] bg-white rounded-2xl p-3 flex flex-col items-center gap-2 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=60&h=60&fit=crop&crop=center" 
+                  alt="Sprouts" 
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-900 text-xs">Sprouts</div>
+                <div className="text-xs text-gray-500">1.8 mi</div>
+              </div>
+            </button>
+            <button className="min-w-[120px] bg-white rounded-2xl p-3 flex flex-col items-center gap-2 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=60&h=60&fit=crop&crop=center" 
+                  alt="Rainbow Grocery" 
+                  className="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-900 text-xs">Rainbow</div>
+                <div className="text-xs text-gray-500">2.5 mi</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Categories Section */}
+        <div className="px-6 pb-32">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Browse Categories</h3>
+            <button className="text-sm text-green-600 font-medium">See all</button>
+          </div>
+          
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {/* Drinks */}
+            <button className="min-w-[280px] h-24 bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1544145945-f90425340c7e?w=60&h=60&fit=crop&crop=center" 
+                  alt="Drinks" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-bold text-gray-900 text-base">Drinks & Beverages</div>
+                <div className="text-sm text-gray-500 mb-1">Energy drinks, Soft drinks</div>
+                <div className="text-xs text-gray-400">124 products</div>
+              </div>
+            </button>
+
+            {/* Snacks */}
+            <button className="min-w-[280px] h-24 bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?w=60&h=60&fit=crop&crop=center" 
+                  alt="Snacks" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-bold text-gray-900 text-base">Snacks & Treats</div>
+                <div className="text-sm text-gray-500 mb-1">Chocolate, Chips, Cookies</div>
+                <div className="text-xs text-gray-400">89 products</div>
+              </div>
+            </button>
+
+            {/* Packaged Foods */}
+            <button className="min-w-[280px] h-24 bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1586201375761-83865001e31c?w=60&h=60&fit=crop&crop=center" 
+                  alt="Packaged" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-bold text-gray-900 text-base">Packaged Foods</div>
+                <div className="text-sm text-gray-500 mb-1">Canned, Frozen, Seafood</div>
+                <div className="text-xs text-gray-400">156 products</div>
+              </div>
+            </button>
+
+            {/* Dairy */}
+            <button className="min-w-[280px] h-24 bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+              <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center p-2">
+                <img 
+                  src="https://images.unsplash.com/photo-1563636619-e9143da7973b?w=60&h=60&fit=crop&crop=center" 
+                  alt="Dairy" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-bold text-gray-900 text-base">Dairy Products</div>
+                <div className="text-sm text-gray-500 mb-1">Milk, Yogurt, Cheese</div>
+                <div className="text-xs text-gray-400">73 products</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="fixed bottom-8 left-0 w-full px-8 flex justify-between items-center z-50">
+          {/* Left Side: Saved + Search */}
+          <div className="bg-gray-200 rounded-full h-14 px-4 flex items-center gap-3 shadow-md">
+            {/* Saved Button */}
+            <button 
+              onClick={() => setCurrentView('home')}
+              className={`h-10 rounded-full flex items-center gap-2 transition-all duration-300 ${
+                currentView === 'home' 
+                  ? 'bg-green-600 text-white px-4' 
+                  : 'text-gray-400 px-2 hover:text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+              </svg>
+              {currentView === 'home' && (
+                <span className="text-sm font-medium whitespace-nowrap">Saved</span>
+              )}
+            </button>
+            
+            {/* Search Button */}
+            <button 
+              onClick={() => setCurrentView('search')}
+              className={`h-10 rounded-full flex items-center gap-2 transition-all duration-300 ${
+                currentView === 'search' 
+                  ? 'bg-green-600 text-white px-4' 
+                  : 'text-gray-400 px-2 hover:text-gray-600'
+              }`}
+            >
+              <Search className="w-5 h-5" />
+              {currentView === 'search' && (
+                <span className="text-sm font-medium whitespace-nowrap">Search</span>
+              )}
+            </button>
+          </div>
+          
+          {/* Right Side: Scan Button */}
+          <button 
+            onClick={() => setCurrentView('scan')}
+            className={`h-14 rounded-full flex items-center gap-2 shadow-md transition-all duration-300 ${
+              currentView === 'scan' 
+                ? 'bg-green-600 text-white px-6' 
+                : 'bg-gray-200 text-gray-600 px-4 hover:bg-gray-300'
+            }`}
+          >
+            <Scan className="w-5 h-5" />
+            {currentView === 'scan' && (
+              <span className="text-sm font-medium whitespace-nowrap">Scan</span>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== HOME SCREEN (Gespeicherte Produkte) ====================
+  if (currentView === 'home') {
+    return (
+      <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+        {/* Header */}
+        <div className="bg-white px-6 pt-14 pb-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-black">My Products</h1>
+              <p className="text-gray-400 text-sm mt-1">Your saved food analysis</p>
+            </div>
+            <button className="text-gray-800 text-xl">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search your products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 text-base outline-none bg-transparent text-gray-700 placeholder-gray-400"
+              className="w-full bg-gray-100 rounded-2xl py-3 pl-12 pr-4 text-base outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
         </div>
 
-        <div className="px-6 mb-6">
-          <div className="bg-gray-900 rounded-3xl p-5 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-yellow-400">⚡</span>
-              <span className="text-yellow-400 font-bold text-xs uppercase tracking-wider">DAILY TIP</span>
-            </div>
-            <h3 className="text-lg font-bold mb-1">Watch out for E171</h3>
-            <p className="text-gray-400 text-sm">Titanium Dioxide is banned in Europe since 2022.</p>
-          </div>
-        </div>
-
-        <div className="px-6 pb-32">
+        {/* Products List */}
+        <div className="px-6 pt-6 pb-32">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Recent Scans</h2>
-            <button className="text-gray-500 text-sm font-medium">View All</button>
+            <h2 className="text-lg font-bold text-gray-900">Saved Products</h2>
+            <div className="relative">
+              <button 
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center gap-2 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
+              >
+                <span>
+                  {healthFilter === 'all' ? 'All Products' : 
+                   healthFilter === 'good' ? 'Good Only' :
+                   healthFilter === 'moderate' ? 'Moderate Only' : 'Poor Only'}
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showFilterDropdown && (
+                <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 py-2 min-w-[140px] z-10">
+                  <button
+                    onClick={() => {
+                      setHealthFilter('all');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                      healthFilter === 'all' ? 'text-green-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    All Products
+                  </button>
+                  <button
+                    onClick={() => {
+                      setHealthFilter('good');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      healthFilter === 'good' ? 'text-green-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Good Only
+                  </button>
+                  <button
+                    onClick={() => {
+                      setHealthFilter('moderate');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      healthFilter === 'moderate' ? 'text-amber-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    Moderate Only
+                  </button>
+                  <button
+                    onClick={() => {
+                      setHealthFilter('poor');
+                      setShowFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                      healthFilter === 'poor' ? 'text-red-600 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    Poor Only
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Health Progress Bar */}
+          <div className="mb-6 bg-gray-50 rounded-xl p-4">
+            {(() => {
+              const goodCount = products.filter(p => p.score >= 70).length;
+              const moderateCount = products.filter(p => p.score >= 40 && p.score < 70).length;
+              const poorCount = products.filter(p => p.score < 40).length;
+              const total = products.length;
+              
+              if (total === 0) return null;
+              
+              const goodPercent = (goodCount / total) * 100;
+              const moderatePercent = (moderateCount / total) * 100;
+              const poorPercent = (poorCount / total) * 100;
+              
+              return (
+                <div className="space-y-3">
+                  {/* Progress Bar */}
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden flex">
+                    {goodCount > 0 && (
+                      <div 
+                        className="h-full bg-green-500 transition-all duration-500" 
+                        style={{ width: `${goodPercent}%` }}
+                      ></div>
+                    )}
+                    {moderateCount > 0 && (
+                      <div 
+                        className="h-full bg-amber-500 transition-all duration-500" 
+                        style={{ width: `${moderatePercent}%` }}
+                      ></div>
+                    )}
+                    {poorCount > 0 && (
+                      <div 
+                        className="h-full bg-red-500 transition-all duration-500" 
+                        style={{ width: `${poorPercent}%` }}
+                      ></div>
+                    )}
+                  </div>
+                  
+                  {/* Clickable Labels with Counts */}
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => setHealthFilter(healthFilter === 'good' ? 'all' : 'good')}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        healthFilter === 'good' 
+                          ? 'bg-green-100 text-green-700 border border-green-200' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>{goodCount} Good</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => setHealthFilter(healthFilter === 'moderate' ? 'all' : 'moderate')}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        healthFilter === 'moderate' 
+                          ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                      <span>{moderateCount} Moderate</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => setHealthFilter(healthFilter === 'poor' ? 'all' : 'poor')}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        healthFilter === 'poor' 
+                          ? 'bg-red-100 text-red-700 border border-red-200' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span>{poorCount} Poor</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           
           <div className="space-y-3">
-            {products.filter(p => 
-              p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              p.brand.toLowerCase().includes(searchQuery.toLowerCase())
-            ).map((product) => (
+            {products.filter(p => {
+              // Text search filter
+              const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+              
+              // Health filter
+              const matchesHealthFilter = healthFilter === 'all' || 
+                                        (healthFilter === 'good' && p.score >= 70) ||
+                                        (healthFilter === 'moderate' && p.score >= 40 && p.score < 70) ||
+                                        (healthFilter === 'poor' && p.score < 40);
+              
+              return matchesSearch && matchesHealthFilter;
+            }).map((product) => (
               <button
                 key={product.id}
                 onClick={() => openProduct(product)}
@@ -270,9 +1019,56 @@ const FoodSafetyApp = () => {
           </div>
         </div>
 
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-20">
-          <button className="bg-gray-900 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-2xl border-4 border-white active:scale-95 transition-transform">
-            <Scan className="w-7 h-7" />
+        {/* Bottom Navigation */}
+        <div className="fixed bottom-8 left-0 w-full px-8 flex justify-between items-center z-50">
+          {/* Left Side: Saved + Search */}
+          <div className="bg-gray-200 rounded-full h-14 px-4 flex items-center gap-3 shadow-md">
+            {/* Saved Button */}
+            <button 
+              onClick={() => setCurrentView('home')}
+              className={`h-10 rounded-full flex items-center gap-2 transition-all duration-300 ${
+                currentView === 'home' 
+                  ? 'bg-green-600 text-white px-4' 
+                  : 'text-gray-400 px-2 hover:text-gray-600'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+              </svg>
+              {currentView === 'home' && (
+                <span className="text-sm font-medium whitespace-nowrap">Saved</span>
+              )}
+            </button>
+            
+            {/* Search Button */}
+            <button 
+              onClick={() => setCurrentView('search')}
+              className={`h-10 rounded-full flex items-center gap-2 transition-all duration-300 ${
+                currentView === 'search' 
+                  ? 'bg-green-600 text-white px-4' 
+                  : 'text-gray-400 px-2 hover:text-gray-600'
+              }`}
+            >
+              <Search className="w-5 h-5" />
+              {currentView === 'search' && (
+                <span className="text-sm font-medium whitespace-nowrap">Search</span>
+              )}
+            </button>
+          </div>
+          
+          {/* Right Side: Scan Button */}
+          <button 
+            onClick={() => setCurrentView('scan')}
+            className={`h-14 rounded-full flex items-center gap-2 shadow-md transition-all duration-300 ${
+              currentView === 'scan' 
+                ? 'bg-green-600 text-white px-6' 
+                : 'bg-gray-200 text-gray-600 px-4 hover:bg-gray-300'
+            }`}
+          >
+            <Scan className="w-5 h-5" />
+            {currentView === 'scan' && (
+              <span className="text-sm font-medium whitespace-nowrap">Scan</span>
+            )}
           </button>
         </div>
       </div>
