@@ -127,20 +127,19 @@ export default function MainTabScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          {/* White Background Section */}
-          <View style={styles.scanWhiteSection}>
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Text style={[styles.logo, { color: '#000' }]}>chec</Text>
-                <Text style={[styles.logo, { color: '#10B981' }]}>K</Text>
-                <Text style={[styles.logo, { color: '#000' }]}>it</Text>
-              </View>
-              <Pressable style={styles.menuButton}>
-                <Text style={{ fontSize: 24, color: '#1F2937' }}>☰</Text>
-              </Pressable>
+          {/* Fixed Header */}
+          <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
+            <View style={styles.logoContainer}>
+              <Text style={[styles.logo, { color: '#000' }]}>chec</Text>
+              <Text style={[styles.logo, { color: '#10B981' }]}>K</Text>
+              <Text style={[styles.logo, { color: '#000' }]}>it</Text>
             </View>
-
+            <Pressable style={styles.menuButton}>
+              <Text style={{ fontSize: 24, color: '#1F2937' }}>☰</Text>
+            </Pressable>
+          </View>
+          
+          <ScrollView showsVerticalScrollIndicator={false}>
             {/* Camera/Scanner */}
             <View style={styles.scannerSection}>
               <View style={styles.cameraContainer}>
@@ -165,11 +164,9 @@ export default function MainTabScreen({ navigation }) {
               </View>
               <Text style={styles.scanInstruction}>Scan a Barcode</Text>
             </View>
-          </View>
 
-          {/* Gray Background Section */}
-          <View style={styles.scanGraySection}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Gray Background Section */}
+            <View style={styles.scanGraySection}>
             {/* Recent Scans */}
             <View style={[styles.sectionHeader, { paddingHorizontal: 24, marginTop: 16, marginBottom: 16 }]}>
               <Text style={styles.sectionTitle}>Recent Scans</Text>
@@ -207,13 +204,13 @@ export default function MainTabScreen({ navigation }) {
                   </Pressable>
                 ))}
               </View>
+            </View>
           </ScrollView>
-        </View>
           
-        {/* Bottom Navigation */}
-        {renderBottomNavigation()}
-      </SafeAreaView>
-    </View>
+          {/* Bottom Navigation */}
+          {renderBottomNavigation()}
+        </SafeAreaView>
+      </View>
     );
   }
 
@@ -243,34 +240,32 @@ export default function MainTabScreen({ navigation }) {
         <SafeAreaView style={styles.safeArea}>
           {/* White Background Section */}
           <View style={{ backgroundColor: '#FFFFFF' }}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Header */}
-              <View style={styles.searchHeader}>
-                <View style={styles.logoContainer}>
-                  <Text style={[styles.logo, { color: '#000' }]}>chec</Text>
-                  <Text style={[styles.logo, { color: '#10B981' }]}>K</Text>
-                  <Text style={[styles.logo, { color: '#000' }]}>it</Text>
-                </View>
-                <Pressable style={styles.menuButton}>
-                  <Text style={{ fontSize: 24, color: '#1F2937' }}>☰</Text>
-                </Pressable>
+            {/* Header */}
+            <View style={styles.searchHeader}>
+              <View style={styles.logoContainer}>
+                <Text style={[styles.logo, { color: '#000' }]}>chec</Text>
+                <Text style={[styles.logo, { color: '#10B981' }]}>K</Text>
+                <Text style={[styles.logo, { color: '#000' }]}>it</Text>
               </View>
+              <Pressable style={styles.menuButton}>
+                <Text style={{ fontSize: 24, color: '#1F2937' }}>☰</Text>
+              </Pressable>
+            </View>
 
-              {/* Search Bar */}
-              <View style={styles.searchContainer}>
-                <Text style={[styles.searchIcon, { color: '#9CA3AF', fontSize: 20 }]}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search products and stores"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Text style={[styles.searchIcon, { color: '#9CA3AF', fontSize: 20 }]}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search products and stores"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
 
-              {/* Extra spacing like Saved */}
-              <View style={{ height: 25 }}></View>
-            </ScrollView>
+            {/* Extra spacing like Saved */}
+            <View style={{ height: 25 }}></View>
           </View>
 
           {/* Gray Background Section */}
@@ -377,7 +372,8 @@ export default function MainTabScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          {/* White Background Section - Fixed */}
+          <View style={styles.savedWhiteSection}>
             {/* Header */}
             <View style={styles.savedHeader}>
               <View style={styles.logoContainer}>
@@ -390,23 +386,22 @@ export default function MainTabScreen({ navigation }) {
               </Pressable>
             </View>
 
-            {/* White Background Section */}
-            <View style={styles.savedWhiteSection}>
-              {/* Search Bar */}
-              <View style={styles.searchContainer}>
-                <Text style={[styles.searchIcon, { color: '#9CA3AF', fontSize: 20 }]}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search your products..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Text style={[styles.searchIcon, { color: '#9CA3AF', fontSize: 20 }]}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search your products..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
-            </View>
+          </View>
 
-            {/* Gray Background Section */}
-            <View style={styles.savedGraySection}>
+          {/* Gray Background Section - Scrollable */}
+          <View style={styles.savedGraySection}>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <View style={[styles.sectionHeader, { paddingHorizontal: 24, marginTop: 0, marginBottom: 8 }]}>
                 <Text style={styles.sectionTitle}>Saved Products</Text>
                 <View style={styles.filterContainer}>
@@ -507,8 +502,8 @@ export default function MainTabScreen({ navigation }) {
                   </Pressable>
                 ))}
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
           
           {/* Bottom Navigation */}
           {renderBottomNavigation()}
