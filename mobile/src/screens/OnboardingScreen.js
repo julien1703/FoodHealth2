@@ -71,7 +71,7 @@ export default function OnboardingScreen({ navigation }) {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      navigation.navigate('Home');
+      navigation.navigate('Main');
     }
   };
 
@@ -82,7 +82,7 @@ export default function OnboardingScreen({ navigation }) {
   };
 
   const skipToHome = () => {
-    navigation.navigate('Home');
+    navigation.navigate('Main');
   };
 
   const renderStepContent = () => {
