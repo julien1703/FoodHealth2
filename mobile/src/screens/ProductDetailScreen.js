@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { saveScan } from '../services/scanService';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +42,20 @@ export default function ProductDetailScreen({ navigation, route }) {
   const { product } = route.params;
   const [expandedSection, setExpandedSection] = useState(null);
   const [isSaved, setIsSaved] = useState(false);
+
+  // Automatisch Scan speichern wenn Screen geöffnet wird
+  useEffect(() => {
+    const saveProductScan = async () => {
+      try {
+        await saveScan(product);
+      } catch (error) {
+        // Leise fehlschlagen wenn User nicht angemeldet ist
+        console.log('Scan konnte nicht gespeichert werden:', error.message);
+      }
+    };
+
+    saveProductScan();
+  }, [product]);
 
   // Dummy: In echter App hier globales Saved-Array aus Context/Storage nutzen
   const toggleSave = () => setIsSaved((prev) => !prev);
@@ -942,4 +957,5 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+
 
