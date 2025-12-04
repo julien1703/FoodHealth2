@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AuthScreen from './src/screens/AuthScreen.jsx';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import MainTabScreen from './src/screens/MainTabScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
@@ -15,9 +16,10 @@ export default function App() {
       <NavigationContainer>
         <StatusBar style="auto" />
         <Stack.Navigator 
-          initialRouteName="Onboarding"
+          initialRouteName="Auth"
           screenOptions={{ headerShown: false }}
         >
+          <Stack.Screen name="Auth" component={AuthScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Main" component={MainTabScreen} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />

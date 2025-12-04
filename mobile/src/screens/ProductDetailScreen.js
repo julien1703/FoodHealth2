@@ -40,6 +40,10 @@ function calculateScoreAndLabel(quickFacts) {
 export default function ProductDetailScreen({ navigation, route }) {
   const { product } = route.params;
   const [expandedSection, setExpandedSection] = useState(null);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Dummy: In echter App hier globales Saved-Array aus Context/Storage nutzen
+  const toggleSave = () => setIsSaved((prev) => !prev);
 
   // Score, Label und Farbe aus QuickFacts berechnen
   const { score, headline, color } = calculateScoreAndLabel(product.quickFacts || []);
@@ -81,9 +85,13 @@ export default function ProductDetailScreen({ navigation, route }) {
             style={styles.heroHeader}
           >
             {/* Header: Back Button - Glasmorphism */}
-            <View style={styles.navigation}>
+            <View style={styles.navigationRow}>
               <Pressable style={styles.roundBackButton} onPress={goBack}>
                 <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
+              </Pressable>
+              <View style={{ flex: 1 }} />
+              <Pressable style={styles.roundSaveButton} onPress={toggleSave}>
+                <Ionicons name={isSaved ? "heart" : "heart-outline"} size={28} color={isSaved ? "#F65972" : "#FFFFFF"} />
               </Pressable>
             </View>
 
@@ -452,10 +460,29 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     paddingHorizontal: 24,
   },
-  navigation: {
+  navigationRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 8,
+    marginTop: 8,
     paddingBottom: 24,
+  },
+  roundSaveButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   roundBackButton: {
     width: 56,
