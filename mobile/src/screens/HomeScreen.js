@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,72 +6,14 @@ import {
   ScrollView,
   TextInput,
   Image,
-  StyleSheet,
-  ActivityIndicator
+  StyleSheet
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getUserScans } from '../services/scanService';
-import { supabase } from '../supabaseClient';
+import { products } from '../data/products';
 
 export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [scans, setScans] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-
-  // User-Login-Status prüfen und Scans laden
-  useEffect(() => {
-    checkUser();
-    
-    // Listener für Auth-Änderungen
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        loadScans();
-      } else {
-        setUser(null);
-        setScans([]);
-      }
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
-
-  // Scans neu laden wenn Screen fokussiert wird
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      if (user) {
-        loadScans();
-      }
-    });
-
-    return unsubscribe;
-  }, [navigation, user]);
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    if (user) {
-      loadScans();
-    } else {
-      setLoading(false);
-    }
-  };
-
-  const loadScans = async () => {
-    try {
-      setLoading(true);
-      const userScans = await getUserScans();
-      setScans(userScans);
-    } catch (error) {
-      console.error('Fehler beim Laden der Scans:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openProduct = (product) => {
     navigation.navigate('ProductDetail', { product });
@@ -87,9 +29,7 @@ export default function HomeScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.greeting}>
-              Hello, {user?.email?.split('@')[0] || 'User'} 👋
-            </Text>
+            <Text style={styles.greeting}>Hello, User 👋</Text>
             <Text style={styles.subGreeting}>What are we eating today?</Text>
             
             <View style={styles.searchContainer}>
@@ -127,54 +67,31 @@ export default function HomeScreen({ navigation }) {
               </Pressable>
             </View>
             
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#10B981" />
-                <Text style={styles.loadingText}>Loading your scans...</Text>
-              </View>
-            ) : scans.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="barcode-outline" size={64} color="#9CA3AF" />
-                <Text style={styles.emptyTitle}>No Scans Yet</Text>
-                <Text style={styles.emptyText}>
-                  Scan your first product to see it here!
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.productsList}>
-                {scans.filter(p => 
-                  p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  p.brand?.toLowerCase().includes(searchQuery.toLowerCase())
-                ).map((product) => (
-                  <Pressable
-                    key={product.scan_id || product.id}
-                    style={styles.productCard}
-                    onPress={() => openProduct(product)}
+            <View style={styles.productsList}>
+              {products.filter(p => 
+                p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.brand.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map((product) => (
+                <Pressable
+                  key={product.id}
+                  style={styles.productCard}
+                  onPress={() => openProduct(product)}
+                >
+                  <View style={styles.productImage}>
+                    <Image source={{ uri: product.image }} style={styles.image} />
+                  </View>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{product.name}</Text>
+                    <Text style={styles.productBrand}>{product.brand}</Text>
+                  </View>
+                  <View 
+                    style={[styles.scoreCircle, { backgroundColor: product.color }]}
                   >
-                    <View style={styles.productImage}>
-                      <Image source={{ uri: product.image }} style={styles.image} />
-                    </View>
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName}>{product.name}</Text>
-                      <Text style={styles.productBrand}>{product.brand}</Text>
-                      {product.scanned_at && (
-                        <Text style={styles.scanDate}>
-                          {new Date(product.scanned_at).toLocaleDateString('de-DE', {
-                            day: 'numeric',
-                            month: 'short'
-                          })}
-                        </Text>
-                      )}
-                    </View>
-                    <View 
-                      style={[styles.scoreCircle, { backgroundColor: product.color }]}
-                    >
-                      <Text style={styles.scoreText}>{product.score}</Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            )}
+                    <Text style={styles.scoreText}>{product.score}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
           </View>
         </ScrollView>
 
@@ -362,36 +279,4 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#FFFFFF',
   },
-  loadingContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  emptyContainer: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  scanDate: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
 });
-
-

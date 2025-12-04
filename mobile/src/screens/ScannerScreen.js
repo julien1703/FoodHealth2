@@ -40,7 +40,10 @@ export default function ScannerScreen({ navigation }) {
   useEffect(() => {
     if (userId) {
       setLoadingScans(true);
-      loadRecentScans();
+      // Kurzes Delay, damit Session sicher geladen ist
+      setTimeout(() => {
+        loadRecentScans();
+      }, 300);
     }
   }, [userId]);
 

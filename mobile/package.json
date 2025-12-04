@@ -11,11 +11,12 @@
   "dependencies": {
     "@expo/cli": "^54.0.16",
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.8.11",
     "@react-navigation/native": "^7.1.22",
     "@react-navigation/stack": "^7.6.8",
     "@supabase/supabase-js": "^2.86.0",
-    "expo": "~54.0.25",
+    "expo": "~54.0.26",
     "expo-barcode-scanner": "^13.0.1",
     "expo-camera": "~17.0.9",
     "expo-linear-gradient": "^15.0.7",
