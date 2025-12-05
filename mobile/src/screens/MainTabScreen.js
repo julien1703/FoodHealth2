@@ -13,7 +13,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// TEMPORÄR: Native Module entfernt für Expo Go Kompatibilität
+// TEMPORÄR: Native Module für Expo Go auskommentiert
 // import { BarCodeScanner } from 'expo-barcode-scanner';
 // import { Camera } from 'expo-camera';
 import { products } from '../data/products';
@@ -49,6 +49,7 @@ export default function MainTabScreen({ navigation }) {
   // Session-Management und Daten-Laden
   useEffect(() => {
     initializeSession();
+    requestCameraPermission();
 
     // Supabase-Session-Listener
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -130,6 +131,38 @@ export default function MainTabScreen({ navigation }) {
     }
   };
 
+  // Kamera-Berechtigungen anfordern (temporär deaktiviert für Expo Go)
+  const requestCameraPermission = async () => {
+    // const { status } = await Camera.requestCameraPermissionsAsync();
+    // setHasPermission(status === 'granted');
+    setHasPermission(false); // Temporär für Expo Go
+  };
+
+  // Echte Kamera-Barcode-Scanner
+  const handleBarCodeScanned = async ({ type, data }) => {
+    setScanned(true);
+    setShowCamera(false);
+    console.log('🔍 Barcode gescannt:', data);
+    
+    // Sofort OpenAI Analyse starten
+    await handleRealBarcodeScan(data);
+  };
+
+  const startScanning = async () => {
+    // Temporär für Expo Go: Direkt zur manuellen Eingabe
+    Alert.alert(
+      'Kamera nicht verfügbar',
+      'Kamera-Features sind in Expo Go nicht verfügbar. Verwende die manuelle Eingabe.',
+      [
+        { text: 'OK', onPress: () => setShowBarcodeInput(true) }
+      ]
+    );
+  };
+
+  const startManualInput = () => {
+    setShowBarcodeInput(true);
+  };
+
   const openProduct = (product) => {
     navigation.navigate('ProductDetail', { product });
   };
@@ -186,10 +219,6 @@ export default function MainTabScreen({ navigation }) {
       setAnalyzing(false);
       setBarcodeInput('');
     }
-  };
-
-  const startScanning = () => {
-    setShowBarcodeInput(true);
   };
 
   const quickTestProducts = [
@@ -252,7 +281,7 @@ export default function MainTabScreen({ navigation }) {
                       style={styles.fallbackImage}
                     />
                     <View style={styles.scanButton}>
-                      <Text style={styles.scanButtonText}>📱 Scan Barcode</Text>
+                      <Text style={styles.scanButtonText}>� Scan Barcode</Text>
                     </View>
                   </Pressable>
                 ) : (
@@ -299,8 +328,15 @@ export default function MainTabScreen({ navigation }) {
                 )}
               </View>
               <Text style={styles.scanInstruction}>
-                Enter barcode manually or test with Quick-Scan
+                Scan with camera or enter barcode manually
               </Text>
+              
+              <Pressable 
+                style={styles.manualInputButton} 
+                onPress={startManualInput}
+              >
+                <Text style={styles.manualInputText}>📝 Enter Barcode Manually</Text>
+              </Pressable>
               
               {/* Quick Test Buttons */}
               <View style={styles.quickTestContainer}>
@@ -805,6 +841,47 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  closeCameraButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 20,
+    marginTop: 20,
+  },
+  closeCameraText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  scanFrame: {
+    width: 250,
+    height: 150,
+    position: 'relative',
+  },
+  scanInstructions: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 30,
   },
   cameraFallback: {
     flex: 1,
@@ -1447,6 +1524,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
+  },
+  // Kamera Styles
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  closeCameraButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 20,
+    marginTop: 20,
+  },
+  closeCameraText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  scanFrame: {
+    width: 250,
+    height: 150,
+    position: 'relative',
+  },
+  scanInstructions: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 30,
+  },
+  manualInputButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 24,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  manualInputText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   // Neue Styles für echten Barcode Scanner
   barcodeInputContainer: {
