@@ -1,11 +1,12 @@
 import supabase from '../supabaseClient';
+import { getCurrentUser, waitForSession } from './sessionService';
 
 /**
  * Speichert einen Scan für den aktuellen User
  */
 export const saveScan = async (product) => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await waitForSession();
     
     if (!user) {
       throw new Error('User nicht angemeldet');
@@ -56,9 +57,10 @@ export const saveScan = async (product) => {
  */
 export const getUserScans = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     
     if (!user) {
+      console.log('No user found for loading scans');
       return [];
     }
 

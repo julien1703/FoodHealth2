@@ -21,6 +21,10 @@ import ProductCard from '../components/ProductCard';
 import FilterDropdown from '../components/FilterDropdown';
 import useFilteredProducts, { getHealthColor } from '../hooks/useProducts';
 import { analyzeProduct, getProductInfo } from '../services/openAI';
+import supabase from '../supabaseClient';
+import { getUserScans } from '../services/scanService';
+import { getSavedProducts } from '../services/savedProductsService';
+import { waitForSession } from '../services/sessionService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -36,8 +40,95 @@ export default function MainTabScreen({ navigation }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   
-  // Recent Scans - echte gescannte Produkte
+  // Recent Scans und Saved Products - aus Supabase
   const [recentScans, setRecentScans] = useState([]);
+  const [savedProducts, setSavedProducts] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // Session-Management und Daten-Laden
+  useEffect(() => {
+    initializeSession();
+
+    // Supabase-Session-Listener
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('MainTab Auth State Change:', event, session?.user?.id);
+      if (session?.user?.id) {
+        setUserId(session.user.id);
+      } else {
+        setUserId(null);
+        setRecentScans([]);
+        setSavedProducts([]);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Daten laden wenn userId verfügbar ist
+  useEffect(() => {
+    if (userId) {
+      loadUserData();
+    }
+  }, [userId]);
+
+  const initializeSession = async () => {
+    try {
+      // Kurzes Delay für Session-Initialisierung
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      let sessionData = await supabase.auth.getSession();
+      console.log('MainTab Session Data (first try):', sessionData.data?.session?.user?.id);
+      
+      if (!sessionData.data?.session?.user) {
+        console.log('No session found, trying refresh...');
+        await supabase.auth.refreshSession();
+        sessionData = await supabase.auth.getSession();
+        console.log('MainTab Session Data (after refresh):', sessionData.data?.session?.user?.id);
+      }
+      
+      if (sessionData.data?.session?.user?.id) {
+        setUserId(sessionData.data.session.user.id);
+      } else {
+        console.log('Still no session found in MainTab');
+        // Versuche getUser als Fallback
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user?.id) {
+          console.log('Found user via getUser:', userData.user.id);
+          setUserId(userData.user.id);
+        }
+      }
+    } catch (error) {
+      console.error('MainTab Session Error:', error);
+    }
+  };
+
+  const loadUserData = async () => {
+    if (!userId) return;
+    
+    console.log('Loading user data for:', userId);
+    setLoadingData(true);
+    
+    try {
+      // Parallel laden für bessere Performance
+      const [scansData, savedData] = await Promise.all([
+        getUserScans(),
+        getSavedProducts()
+      ]);
+      
+      console.log('Loaded scans:', scansData?.length || 0);
+      console.log('Loaded saved products:', savedData?.length || 0);
+      
+      setRecentScans(scansData || []);
+      setSavedProducts(savedData || []);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const openProduct = (product) => {
     navigation.navigate('ProductDetail', { product });
@@ -58,13 +149,33 @@ export default function MainTabScreen({ navigation }) {
       // Step 2: Sende an OpenAI für Analyse (nutzt dein Template)
       const analysis = await analyzeProduct(productInfo);
       
-      // Step 3: Zu Recent Scans hinzufügen
-      const scanResult = {
-        ...analysis,
-        scannedAt: new Date().toISOString(),
-        barcode: barcode
-      };
-      setRecentScans(prev => [scanResult, ...prev.slice(0, 9)]); // Max 10 recent scans
+      // Step 3: In Supabase speichern falls User eingeloggt
+      if (userId) {
+        console.log('Saving scan to Supabase for userId:', userId);
+        const scanData = {
+          user_id: userId,
+          product_id: barcode,
+          product_data: { ...analysis, barcode, scannedAt: new Date().toISOString() },
+          scanned_at: new Date().toISOString(),
+        };
+        
+        try {
+          const { error } = await supabase.from('scans').insert([scanData]);
+          if (error) {
+            console.error('Scan save error:', error);
+          } else {
+            console.log('Scan saved successfully');
+            // Recent Scans neu laden
+            setTimeout(() => {
+              loadUserData();
+            }, 500);
+          }
+        } catch (err) {
+          console.error('Scan save catch error:', err);
+        }
+      } else {
+        console.log('No userId available, skipping scan save (user might still be logging in)');
+      }
       
       // Step 4: Navigiere zur Detail-Seite mit AI-Analyse
       navigation.navigate('ProductDetail', { product: analysis });
@@ -93,11 +204,21 @@ export default function MainTabScreen({ navigation }) {
   };
 
   // Hooks immer initialisieren, Listen je nach View wählen
-  const filteredProductsScan = recentScans;
+  const filteredProductsScan = recentScans?.filter(product => {
+    const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.id?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = healthFilter === 'all' ||
+                         (healthFilter === 'good' && product.score >= 70) ||
+                         (healthFilter === 'moderate' && product.score >= 40 && product.score < 70) ||
+                         (healthFilter === 'poor' && product.score < 40);
+    return matchesSearch && matchesFilter;
+  }) || [];
+  
   const filteredProductsOther = useFilteredProducts(products, searchQuery, healthFilter);
   const filterProducts = (list, includeLimit = false) => includeLimit ? list.slice(0, 3) : list;
   const getFilterButtonText = (screenType) => {
-    if (healthFilter === 'all') return screenType === 'scan' ? 'All Scans' : 'All Products';
+    if (healthFilter === 'all') return screenType === 'scan' ? 'All Scans' : screenType === 'saved' ? 'All Saved' : 'All Products';
     if (healthFilter === 'good') return 'Good Only';
     if (healthFilter === 'moderate') return 'Moderate Only';
     return 'Poor Only';
@@ -223,9 +344,27 @@ export default function MainTabScreen({ navigation }) {
               </View>
               
               <View style={[styles.productList, { paddingHorizontal: 24 }]}> 
-                {(currentView === 'scan' ? filterProducts(filteredProductsScan, true) : filterProducts(filteredProductsOther, true)).map((product) => (
-                  <ProductCard key={product.id} product={product} onPress={openProduct} />
-                ))}
+                {loadingData ? (
+                  <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 32 }} />
+                ) : filteredProductsScan.length > 0 ? (
+                  filterProducts(filteredProductsScan, true).map((product) => (
+                    <ProductCard key={product.scan_id || product.id} product={product} onPress={openProduct} />
+                  ))
+                ) : userId ? (
+                  <View style={{ alignItems: 'center', marginTop: 48 }}>
+                    <Text style={{ fontSize: 18, color: '#6B7280', marginBottom: 8 }}>No recent scans</Text>
+                    <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center' }}>
+                      Start scanning products to see your scan history here
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ alignItems: 'center', marginTop: 48 }}>
+                    <Text style={{ fontSize: 18, color: '#6B7280', marginBottom: 8 }}>Please log in</Text>
+                    <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center' }}>
+                      Log in to save and view your scan history
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </ScrollView>
@@ -383,14 +522,27 @@ export default function MainTabScreen({ navigation }) {
 
   // ==================== SAVED SCREEN ====================
   if (currentView === 'saved') {
-    const goodCount = products.filter(p => p.score >= 70).length;
-    const moderateCount = products.filter(p => p.score >= 40 && p.score < 70).length;
-    const poorCount = products.filter(p => p.score < 40).length;
-    const total = products.length;
+    // Verwende savedProducts aus Supabase statt statische products
+    const currentSavedProducts = savedProducts || [];
+    const goodCount = currentSavedProducts.filter(p => p.score >= 70).length;
+    const moderateCount = currentSavedProducts.filter(p => p.score >= 40 && p.score < 70).length;
+    const poorCount = currentSavedProducts.filter(p => p.score < 40).length;
+    const total = currentSavedProducts.length;
 
     const goodPercent = total > 0 ? (goodCount / total) * 100 : 0;
     const moderatePercent = total > 0 ? (moderateCount / total) * 100 : 0;
     const poorPercent = total > 0 ? (poorCount / total) * 100 : 0;
+
+    // Gefilterte Saved Products für Anzeige
+    const filteredSavedProducts = currentSavedProducts.filter(product => {
+      const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.brand?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = healthFilter === 'all' ||
+                           (healthFilter === 'good' && product.score >= 70) ||
+                           (healthFilter === 'moderate' && product.score >= 40 && product.score < 70) ||
+                           (healthFilter === 'poor' && product.score < 40);
+      return matchesSearch && matchesFilter;
+    });
 
     return (
       <View style={styles.container}>
@@ -509,11 +661,22 @@ export default function MainTabScreen({ navigation }) {
                 </View>
               )}
 
-              {/* Products List */}
+              {/* Saved Products List */}
               <View style={[styles.productList, { paddingHorizontal: 24 }]}> 
-                {(currentView === 'scan' ? filterProducts(filteredProductsScan) : filterProducts(filteredProductsOther)).map((product) => (
-                  <ProductCard key={product.id} product={product} onPress={openProduct} />
-                ))}
+                {loadingData ? (
+                  <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 32 }} />
+                ) : filteredSavedProducts.length > 0 ? (
+                  filteredSavedProducts.map((product) => (
+                    <ProductCard key={product.save_id || product.id} product={product} onPress={openProduct} />
+                  ))
+                ) : (
+                  <View style={{ alignItems: 'center', marginTop: 48 }}>
+                    <Text style={{ fontSize: 18, color: '#6B7280', marginBottom: 8 }}>No saved products</Text>
+                    <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center' }}>
+                      Start scanning and saving products to see them here
+                    </Text>
+                  </View>
+                )}
               </View>
             </ScrollView>
           </View>

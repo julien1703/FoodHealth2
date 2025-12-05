@@ -18,6 +18,26 @@ function OnboardingScreen({ navigation }) {
   const [selectedHabits, setSelectedHabits] = useState([]);
   const [selectedAllergies, setSelectedAllergies] = useState([]);
   const [expandedAllergy, setExpandedAllergy] = useState(null);
+  const [userSession, setUserSession] = useState(null);
+  
+  // Session-Monitoring für Debugging
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const supabase = await import('../supabaseClient').then(mod => mod.default);
+        const { data } = await supabase.auth.getSession();
+        setUserSession(data?.session?.user?.id || null);
+        console.log('Onboarding session status:', data?.session?.user?.id || 'No session');
+      } catch (error) {
+        console.error('Onboarding session check error:', error);
+      }
+    };
+    
+    checkSession();
+    const interval = setInterval(checkSession, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -119,7 +139,7 @@ function OnboardingScreen({ navigation }) {
     toggleSelection(fullAllergyName, 'allergies');
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (currentStep < steps.length - 1) {
       const nextStepValue = currentStep + 1;
       setCurrentStep(nextStepValue);
@@ -129,7 +149,21 @@ function OnboardingScreen({ navigation }) {
         startCompleteAnimation();
       }
     } else {
-      navigation.navigate('Main');
+      // Onboarding abgeschlossen - markiere als complete
+      try {
+        const { markOnboardingComplete } = await import('../services/profileService');
+        const supabase = await import('../supabaseClient').then(mod => mod.default);
+        const { data } = await supabase.auth.getUser();
+        
+        if (data?.user?.id) {
+          await markOnboardingComplete(data.user.id);
+          console.log('Onboarding completed and marked');
+        }
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+      }
+      
+      navigation.replace('Main');
     }
   };
 
@@ -180,8 +214,22 @@ function OnboardingScreen({ navigation }) {
     }
   };
 
-  const skipToMain = () => {
-    navigation.navigate('Main');
+  const skipToMain = async () => {
+    // Auch beim Skip als completed markieren
+    try {
+      const { markOnboardingComplete } = await import('../services/profileService');
+      const supabase = await import('../supabaseClient').then(mod => mod.default);
+      const { data } = await supabase.auth.getUser();
+      
+      if (data?.user?.id) {
+        await markOnboardingComplete(data.user.id);
+        console.log('Onboarding skipped and marked as completed');
+      }
+    } catch (error) {
+      console.error('Error skipping onboarding:', error);
+    }
+    
+    navigation.replace('Main');
   };
 
   const preferenceOptions = [

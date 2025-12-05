@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import supabase from '../supabaseClient';
 import {
   View,
   Text,
@@ -21,10 +21,11 @@ export default function ScannerScreen({ navigation }) {
 
   useEffect(() => {
     getCameraPermissions();
-    fetchUserIdFromSession();
+    initializeSession();
 
     // Supabase-Session-Listener
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth State Change:', event, session?.user?.id);
       if (session?.user?.id) {
         setUserId(session.user.id);
       } else {
@@ -52,17 +53,33 @@ export default function ScannerScreen({ navigation }) {
     setHasPermission(status === 'granted');
   };
 
-  const fetchUserIdFromSession = async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (data?.session?.user?.id) {
-      setUserId(data.session.user.id);
-    } else {
+  const initializeSession = async () => {
+    try {
+      // Warte kurz, damit Session geladen wird
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const { data, error } = await supabase.auth.getSession();
+      console.log('Session Data:', data?.session?.user?.id);
+      if (data?.session?.user?.id) {
+        setUserId(data.session.user.id);
+      } else {
+        setUserId(null);
+      }
+    } catch (error) {
+      console.error('Session Error:', error);
       setUserId(null);
     }
   };
 
   const loadRecentScans = async () => {
+    if (!userId) {
+      console.log('No userId available for loading scans');
+      return;
+    }
+    
+    console.log('Loading recent scans for userId:', userId);
     setErrorScans(null);
+    setLoadingScans(true);
+    
     try {
       const { data, error } = await supabase
         .from('scans')
@@ -70,13 +87,19 @@ export default function ScannerScreen({ navigation }) {
         .eq('user_id', userId)
         .order('scanned_at', { ascending: false })
         .limit(5);
+        
+      console.log('Scans query result:', { data, error });
+      
       if (error) {
+        console.error('Scans error:', error);
         setErrorScans(error.message);
         setRecentScans([]);
       } else {
-        setRecentScans(data);
+        console.log('Loaded scans:', data?.length || 0);
+        setRecentScans(data || []);
       }
     } catch (err) {
+      console.error('Scans catch error:', err);
       setErrorScans(err.message);
       setRecentScans([]);
     }
@@ -88,16 +111,30 @@ export default function ScannerScreen({ navigation }) {
 
     // Produktdaten speichern
     if (userId) {
+      console.log('Saving scan for userId:', userId, 'productId:', data);
       const scanData = {
         user_id: userId,
         product_id: data,
-        product_data: { id: data },
+        product_data: { id: data, name: `Product ${data}`, scanned: true },
         scanned_at: new Date().toISOString(),
       };
-      const { error } = await supabase.from('scans').insert([scanData]);
-      if (!error) {
-        loadRecentScans();
+      
+      try {
+        const { error } = await supabase.from('scans').insert([scanData]);
+        if (error) {
+          console.error('Scan save error:', error);
+        } else {
+          console.log('Scan saved successfully');
+          // Kurz warten, dann Recent Scans neu laden
+          setTimeout(() => {
+            loadRecentScans();
+          }, 500);
+        }
+      } catch (err) {
+        console.error('Scan save catch error:', err);
       }
+    } else {
+      console.log('No userId available for saving scan');
     }
 
     Alert.alert(

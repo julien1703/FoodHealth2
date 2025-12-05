@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { products } from '../data/products';
+import { getProfile } from '../services/profileService';
 
 export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [username, setUsername] = useState('');
+
+  useEffect(() => {
+    async function fetchUsername() {
+      try {
+        const session = await import('../supabaseClient').then(mod => mod.default.auth.getSession());
+        const userId = (await session).data?.session?.user?.id;
+        if (userId) {
+          const profile = await getProfile(userId);
+          setUsername(profile?.username || 'User');
+        }
+      } catch (e) {
+        console.error('Error fetching username:', e);
+        setUsername('User');
+      }
+    }
+    fetchUsername();
+  }, []);
 
   const openProduct = (product) => {
     navigation.navigate('ProductDetail', { product });
@@ -29,7 +48,7 @@ export default function HomeScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.greeting}>Hello, User 👋</Text>
+            <Text style={styles.greeting}>Hello, {username} 👋</Text>
             <Text style={styles.subGreeting}>What are we eating today?</Text>
             
             <View style={styles.searchContainer}>
