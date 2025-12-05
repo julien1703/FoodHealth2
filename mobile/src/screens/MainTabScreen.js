@@ -13,9 +13,8 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// TEMPORÄR: Native Module für Expo Go auskommentiert
+// BarCodeScanner für Expo Go temporär deaktiviert
 // import { BarCodeScanner } from 'expo-barcode-scanner';
-// import { Camera } from 'expo-camera';
 import { products } from '../data/products';
 import ProductCard from '../components/ProductCard';
 import FilterDropdown from '../components/FilterDropdown';
@@ -131,11 +130,9 @@ export default function MainTabScreen({ navigation }) {
     }
   };
 
-  // Kamera-Berechtigungen anfordern (temporär deaktiviert für Expo Go)
+  // Kamera-Berechtigungen (simuliert für Expo Go)
   const requestCameraPermission = async () => {
-    // const { status } = await Camera.requestCameraPermissionsAsync();
-    // setHasPermission(status === 'granted');
-    setHasPermission(false); // Temporär für Expo Go
+    setHasPermission(false); // Kamera in Expo Go nicht verfügbar
   };
 
   // Echte Kamera-Barcode-Scanner
@@ -148,13 +145,13 @@ export default function MainTabScreen({ navigation }) {
     await handleRealBarcodeScan(data);
   };
 
-  const startScanning = async () => {
-    // Temporär für Expo Go: Direkt zur manuellen Eingabe
+  const startScanning = () => {
     Alert.alert(
-      'Kamera nicht verfügbar',
-      'Kamera-Features sind in Expo Go nicht verfügbar. Verwende die manuelle Eingabe.',
+      'Barcode-Scanner',
+      'Kamera-Scanner ist in Expo Go nicht verfügbar. Verwende die manuelle Eingabe oder teste mit den Quick-Scan Buttons.',
       [
-        { text: 'OK', onPress: () => setShowBarcodeInput(true) }
+        { text: 'Manuelle Eingabe', onPress: () => setShowBarcodeInput(true) },
+        { text: 'OK', style: 'cancel' }
       ]
     );
   };
@@ -274,6 +271,7 @@ export default function MainTabScreen({ navigation }) {
             {/* ECHTER BARCODE SCANNER - Manuelle Eingabe */}
             <View style={styles.scannerSection}>
               <View style={styles.cameraContainer}>
+                {/* Kamera-Scanner für Expo Go deaktiviert */}
                 {!showBarcodeInput ? (
                   <Pressable style={styles.cameraFallback} onPress={startScanning}>
                     <Image
